@@ -43,9 +43,10 @@ def extract_image_names(df, image_path):
 
     return all_image_names
 
-def sample_from_df(df, num):
-    df_shuffle = df.sample(frac=1)
-    df = df_shuffle[:num].copy()
+def sample_from_df(df, num=None, seed=None):
+    df = df.sample(frac=1, random_state=seed).copy()
+    if num:
+        df = df[:num]
 
     return df
 
@@ -57,7 +58,7 @@ def data_to_tensors(img_names, captions):
     batch_size = 16 #size used during training
     buffer_size = 1000
     dataset = tf.data.Dataset.from_tensor_slices((img_names, captions))
-    dataset = dataset.map(lambda item1, item2: tf.numpy_function(map_func, [item1, item2], [tf.float32, tf.float32]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(lambda item1, item2: tf.numpy_function(map_func, [item1, item2], [tf.float32, tf.int32]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.shuffle(buffer_size).batch(batch_size)
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
