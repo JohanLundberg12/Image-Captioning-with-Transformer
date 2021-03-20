@@ -11,23 +11,26 @@ from load_data import *
 from image_preprocessing import extract_image_features
 from transformer import *
 
-image_path = 'data/Flickr8k_Dataset/'
-captions_file = "data/Flickr8k_text/Flickr8k.token.txt"
-extract_image_features = False
-seed = 42
-lang = 'danish'
+
 
 # Loading data
+lang = 'danish'
+image_path = 'data/Flickr8k_Dataset/'
+captions_file = get_captions_file(lang)
+seed = 42
+
 df = load_captions(captions_file)
 df = sample_from_df(df, 64, seed)
+
+# Getting image features
+extract_image_features = False
+if extract_image_features:
+    extract_image_features(image_path, all_image_names)
 
 # Extracting captions and image names from the dataframe
 all_captions = extract_captions(df)
 all_image_names = extract_image_names(df, image_path)
 
-# Getting image features
-if extract_image_features:
-    extract_image_features(image_path, all_image_names)
 
 # BertTokenizer & BertModel
 if lang == 'danish':

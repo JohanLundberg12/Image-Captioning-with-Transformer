@@ -1,7 +1,7 @@
 import os
 import six
 import time
-from google.cloud import translate_v2 as translate
+from google.cloud import translate_v2
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="/mnt/c/Users/johan/Data_Science/Bachelor/Image-Captioning-with-Transformer/My Project 55093-fccd3cabb42a.json"
 
 def translate_text(target, text):
@@ -11,7 +11,7 @@ def translate_text(target, text):
     See https://g.co/cloud/translate/v2/translate-reference#supported_languages
     """
 
-    translate_client = translate.Client()
+    translate_client = translate_v2.Client()
 
     if isinstance(text, six.binary_type):
         text = text.decode("utf-8")
@@ -27,7 +27,9 @@ def translate(caption):
     while True:
         try:
             translation = translate_text('da', caption)
-        except Exception:
+        except Exception as e:
+            print(e)
+            print("Sleeping for 100 sec...")
             time.sleep(100) #requests measured every 100 seconds. 
             continue
         break
@@ -38,9 +40,11 @@ def translate(caption):
 if __name__ == "__main__":
     file = 'data/Flickr8k_text/Flickr8k.token.txt'
     with open("data/Flickr8k_text/Flickr8k_danish.token.txt", "w") as da_captions_file:
-        with open(file) as f:
+        with open(file, "r") as f:
             text = f.read()
-            for line in text.split("\n"):
+            for i, line in enumerate(text.split("\n")):
+                if i % 5000 == 0:
+                    print(i)
                 if line:
                     col = line.split("\t")
                     caption_identifier = col[0].split("#") #image_name#id

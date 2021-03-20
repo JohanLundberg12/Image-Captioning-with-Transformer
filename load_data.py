@@ -2,6 +2,14 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 
+def get_captions_file(lang):
+    if lang == 'danish':
+        captions_file = "data/Flickr8k_text/Flickr8k_danish.token.txt"
+    elif lang == 'english':
+        captions_file = "data/Flickr8k_text/Flickr8k.token.txt"
+
+    return captions_file
+
 def load_captions(caption_file):
     with open(caption_file) as file:
         text = file.read()
