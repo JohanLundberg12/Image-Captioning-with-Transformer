@@ -47,3 +47,9 @@ def extract_image_features(image_path, all_image_names):
     image_features_extract_model = load_inception_v3()
     image_dataset = get_image_dataset(all_image_names)
     get_image_features(image_dataset, image_features_extract_model)
+
+
+if __name__ == '__main__':
+    image_path = 'data/Flickr8k_Dataset/'
+    all_image_names = [file for file in dir(image_path) if file.split('.')[-1] == 'jpg'] #check to avoid .npy files
+    extract_image_features(image_path, all_image_names)

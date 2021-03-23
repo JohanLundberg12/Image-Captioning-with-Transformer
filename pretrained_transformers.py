@@ -3,18 +3,35 @@
 from transformers import BertTokenizer, TFBertModel #english
 from transformers import AutoTokenizer, AutoModelForPreTraining #danish
 
-def get_danish_transformers():
+def get_danish_tokenizer():
     tokenizer = AutoTokenizer.from_pretrained(
-        'Maltehb/danish-bert-botxo', do_lower_case=True)
+            'Maltehb/danish-bert-botxo', do_lower_case=True)
+
+    return tokenizer
+
+
+def get_danish_transformer():
     BertModel = AutoModelForPreTraining.from_pretrained('Maltehb/danish-bert-botxo', output_hidden_states=True)
 
-    return tokenizer, BertModel
+    return BertModel
 
-def get_english_transformers():
+
+def get_english_tokenizer():
     tokenizer = BertTokenizer.from_pretrained(
         'bert-base-uncased', do_lower_case=True)
+    
+    return tokenizer
 
+def get_english_transformer():
     BertModel = TFBertModel.from_pretrained(
         'bert-base-uncased', output_hidden_states=True)
 
-    return tokenizer, BertModel
+    return BertModel
+
+def get_pretrained_bert_transformer(lang):
+    if lang == 'danish':
+        return get_danish_transformer()
+    elif lang == 'english':
+        return get_english_transformer()
+    else:
+        raise NotImplementedError(f"{lang} not supported")

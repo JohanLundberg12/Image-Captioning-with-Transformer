@@ -1,90 +1,13 @@
 # Standard Modules
+import numpy as np
 import time
 import tensorflow as tf
 
-# Transforme Module
-from transformers import BertTokenizer, TFBertModel #english
-from transformers import AutoTokenizer, AutoModelForPreTraining #danish
-
 # Custom Modules
-from load_data import *
-from image_preprocessing import extract_image_features
+from configuration import Config
+from load_data import build_dataset
+from pretrained_transformers import get_pretrained_bert_transformer, get_danish_tokenizer, get_english_tokenizer
 from transformer import *
-
-
-
-# Loading data
-lang = 'danish'
-image_path = 'data/Flickr8k_Dataset/'
-captions_file = get_captions_file(lang)
-seed = 42
-
-df = load_captions(captions_file)
-df = sample_from_df(df, 64, seed)
-
-# Getting image features
-extract_image_features = False
-if extract_image_features:
-    extract_image_features(image_path, all_image_names)
-
-# Extracting captions and image names from the dataframe
-all_captions = extract_captions(df)
-all_image_names = extract_image_names(df, image_path)
-
-
-# BertTokenizer & BertModel
-if lang == 'danish':
-    tokenizer = AutoTokenizer.from_pretrained(
-        'Maltehb/danish-bert-botxo')
-    BertModel = AutoModelForPreTraining.from_pretrained('Maltehb/danish-bert-botxo')
-elif lang =='en':
-    tokenizer = BertTokenizer.from_pretrained(
-        'bert-base-uncased', do_lower_case=True)
-
-    BertModel = TFBertModel.from_pretrained(
-        'bert-base-uncased', output_hidden_states=True)
-else:
-    print("Wrong language specified: ", lang)
-
-input_ids = tokenizer(all_captions,
-                      padding=True,
-                      return_tensors="tf",
-                      return_token_type_ids=False,
-                      return_attention_mask=False)['input_ids']
-
-# Splits
-train_pct = int(0.8*len(all_image_names))
-test_pct = int(0.9*len(all_image_names))
-img_names_train, img_names_val, img_names_test = all_image_names[
-    :train_pct], all_image_names[train_pct:test_pct], all_image_names[test_pct:]
-cap_train, cap_val, cap_test = input_ids[:train_pct], input_ids[
-    train_pct:test_pct], input_ids[test_pct:]
-
-assert (len(img_names_train) == len(cap_train)) & (len(
-    img_names_test) == len(cap_test)) & (len(img_names_val) == len(cap_val))
-
-# Convert data to tensors
-train_dataset = data_to_tensors(img_names_train, cap_train)
-val_dataset = data_to_tensors(img_names_val, cap_val)
-test_dataset = data_to_tensors(img_names_test, cap_test)
-
-# Training parameters
-vocab_size = tokenizer.vocab_size #should perhaps be fixed size and not entire vocab?
-num_layer = 4
-d_model = 768
-dff = 2048
-num_heads = 8
-row_size = 8
-col_size = 8
-target_vocab_size = vocab_size + 1
-dropout_rate = 0.1
-
-# Loss and Optimizer
-learning_rate = CustomSchedule(d_model)
-optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98,
-                                     epsilon=1e-9)
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
-    from_logits=True, reduction='none')
 
 
 def loss_function(real, pred):
@@ -94,33 +17,14 @@ def loss_function(real, pred):
     loss_ *= mask
     return tf.reduce_sum(loss_)/tf.reduce_sum(mask)
 
+# Training
 
-train_loss = tf.keras.metrics.Mean(name='train_loss')
-train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(
-    name='train_accuracy')
-
-# Instantiate model
-transformer = Transformer(num_layer, d_model, num_heads, dff, row_size, col_size,
-                          target_vocab_size, BertModel, max_pos_encoding=target_vocab_size,
-                          rate=dropout_rate)
-
-#Checkpointing
-checkpoint_path = "./checkpoints/train"
-ckpt = tf.train.Checkpoint(transformer=transformer,
-                           optimizer=optimizer)
-ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=5)
-# if a checkpoint exists, restore the latest checkpoint.
-if ckpt_manager.latest_checkpoint:
-  ckpt.restore(ckpt_manager.latest_checkpoint)
-  print ('Latest checkpoint restored!!')
-
-# Training 
-
-@tf.function
+#@tf.function
 def train_step(img_tensor, tar):
     tar_inp = tar[:, :-1]  # cuts last column off
     tar_real = tar[:, 1:]  # cuts first column off
-    dec_mask = create_masks_decoder(tar_inp) # creates a tensor mask of (tar_inp.shape[0], 1, tar_inp.shape[1], tar_inp.shape[1])
+    # creates a tensor mask of (tar_inp.shape[0], 1, tar_inp.shape[1], tar_inp.shape[1])
+    dec_mask = create_masks_decoder(tar_inp)
     # E.g. 8 (tar_inp.shape[0] -> batch size) instances of a list of a 15x15 matrice
     with tf.GradientTape() as tape:  # backprop.GradientTape
         predictions, _ = transformer(
@@ -134,26 +38,74 @@ def train_step(img_tensor, tar):
     train_accuracy(tar_real, predictions)
 
 
-EPOCHS = 1
+if __name__ == '__main__':
+    lang = 'english'
+    embedding_type = 'pretrained' #pretrained or random
+    config = Config(lang, embedding_type)
+    seed = config.seed
 
-for epoch in range(1):
-    print("Epoch: ", epoch)
-    start = time.time()
-    train_loss.reset_states()
-    train_accuracy.reset_states()
+    if config.lang == 'english':
+        tokenizer = get_english_tokenizer()
+    elif config.lang == 'danish':
+        tokenizer = get_danish_tokenizer()
+    else:
+        raise NotImplementedError(f"{config.lang} not supported")
 
-    # (img_tensor: image, tar: input sentence)
-    for (batch, (img_tensor, tar)) in enumerate(train_dataset):
-        train_step(img_tensor, tar)
+    if config.embedding_type == 'pretrained':
+        model = get_pretrained_bert_transformer(config.lang)
+        embedding = model.bert.embeddings.weights[0] #word_embeddings -> shape: 30522 x 768
+    else:
+        embedding = tf.keras.layers.Embedding(
+            tokenizer.vocab_size, config.d_model)
+    
+    dataset_train, dataset_val, dataset_test = build_dataset(config, tokenizer)
 
-        if batch % 50 == 0:
-            print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
-                epoch + 1, batch, train_loss.result(), train_accuracy.result()))
-    if (epoch + 1) % 5 == 0:
-        ckpt_save_path = ckpt_manager.save()
-        print (f'Saving checkpoint for epoch {epoch+1} at {ckpt_save_path}')
+    transformer = build_transformer(config, embedding, tokenizer)
 
-    print('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(epoch + 1,
-                                                        train_loss.result(),
-                                                        train_accuracy.result()))
-    print(f'Time taken for 1 epoch: {time.time() - start:.2f} secs\n')
+    # Loss and Optimizer
+    learning_rate = CustomSchedule(config.d_model)
+    optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98,
+                                         epsilon=1e-9)
+    loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction='none')
+
+    train_loss = tf.keras.metrics.Mean(name='train_loss')
+    train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(
+        name='train_accuracy')
+    
+    # Checkpointing
+    ckpt = tf.train.Checkpoint(transformer=transformer,
+                               optimizer=optimizer)
+    ckpt_manager = tf.train.CheckpointManager(
+        ckpt, config.checkpoint_path, max_to_keep=5)
+    # if a checkpoint exists, restore the latest checkpoint.
+    ckpt.restore(ckpt_manager.latest_checkpoint)
+    if ckpt_manager.latest_checkpoint:
+        print("Restored from {}".format(ckpt_manager.latest_checkpoint))
+    else:
+        print("Initializing from scratch.")
+    
+
+    for epoch in range(config.epochs):
+        print("Epoch: ", epoch)
+        start = time.time()
+        train_loss.reset_states()
+        train_accuracy.reset_states()
+
+        # (img_tensor: image, tar: input sentence)
+        for (batch, (img_tensor, tar)) in enumerate(dataset_train):
+            train_step(img_tensor, tar)
+
+            if batch % 50 == 0:
+                print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
+                    epoch + 1, batch, train_loss.result(), train_accuracy.result()))
+        if (epoch + 1) % 5 == 0:
+            ckpt_save_path = ckpt_manager.save()
+            print(f'Saving checkpoint for epoch {epoch+1} at {ckpt_save_path}')
+
+        print('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(epoch + 1,
+                                                            train_loss.result(),
+                                                            train_accuracy.result()))
+        print(f'Time taken for 1 epoch: {time.time() - start:.2f} secs\n')
+
+    transformer.save_weights("./saved_models/ckpt")
