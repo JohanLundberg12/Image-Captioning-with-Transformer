@@ -13,7 +13,7 @@ class Config(object):
 
         #Basic
         self.seed = 42
-        self.epochs = 1
+        self.epochs = 5
 
         #Transformer
         self.num_layers = 4

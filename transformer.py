@@ -217,7 +217,6 @@ class Decoder(tf.keras.layers.Layer):
         self.d_model = d_model
         self.num_layers = num_layers
 
-        # self.embedding = tf.keras.layers.Embedding(target_vocab_size, d_model) # for random embeddings
         self.embedding = embedding
         self.pos_encoding = positional_encoding_1d(
             maximum_position_encoding, d_model)
@@ -226,19 +225,26 @@ class Decoder(tf.keras.layers.Layer):
                            for _ in range(num_layers)]
         self.dropout = tf.keras.layers.Dropout(rate)
 
+    def get_word_embedding(self, x):
+        return self.embedding[x]
+
+
+    def get_sentence_tensor(self, x):
+        return tf.map_fn(self.get_word_embedding, x, fn_output_signature=tf.float32)
+
+
     def call(self, x, enc_output, training, look_ahead_mask=None, padding_mask=None):
         seq_len = tf.shape(x)[1]
         attention_weights = {}
-
         if not isinstance(self.embedding, keras.layers.Embedding):
-            x_embedded = [tf.map_fn(fn = lambda tok_id: self.embedding[tok_id], elems=row, fn_output_signature=tf.float32) for row in x]
-            x = tf.stack(x_embedded)
+            x = tf.map_fn(self.get_sentence_tensor, x, fn_output_signature=tf.float32) working but very slow
+            #x_embedded = [tf.map_fn(fn = lambda tok_id: self.embedding[tok_id], elems=row, fn_output_signature=tf.float32) for row in x] working without @tf.function
+            #x = tf.stack(x_embedded)
         else:
             x = self.embedding(x)
-
-        #x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
-        #x += self.pos_encoding[:, :seq_len, :]
-        #x = self.dropout(x, training=training)
+            x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
+            x += self.pos_encoding[:, :seq_len, :]
+            x = self.dropout(x, training=training)
 
         for i in range(self.num_layers):
             x, block1, block2 = self.dec_layers[i](x, enc_output, training,
@@ -248,10 +254,6 @@ class Decoder(tf.keras.layers.Layer):
             attention_weights['decoder_layer{}_block2'.format(i+1)] = block2
 
         return x, attention_weights
-
-    
-    def get_x_embedding(self, x):
-        return tf.map_fn(fn = lambda e: self.embedding[e], elems=x, fn_output_signature=tf.float32)
 
 
 class Transformer(tf.keras.Model):
@@ -271,6 +273,10 @@ class Transformer(tf.keras.Model):
             tar, enc_output, training, look_ahead_mask, dec_padding_mask)
         # (batch_size, tar_seq_len, target_vocab_size)
         final_output = self.final_layer(dec_output)
+        
+        #Check effect on embedding
+        #check_pretrained_embedding(embedding, self.embedding)
+        
         return final_output, attention_weights
 
 
