@@ -1,14 +1,14 @@
 # Standard Modules
 import numpy as np
+import sys
 import time
 import tensorflow as tf
 
 # Custom Modules
-from configuration import Config
 from load_data import build_dataset
 from helper_functions import *
 from plots import *
-from pretrained_transformers import get_pretrained_bert_transformer, get_danish_tokenizer, get_english_tokenizer
+from pretrained_transformers import get_embedding, get_tokenizer
 from transformer import *
 
 
@@ -19,10 +19,10 @@ def loss_function(real, pred):
     loss_ *= mask
     return tf.reduce_sum(loss_)/tf.reduce_sum(mask)
 
+
 # Training
 
-
-@tf.function
+#@tf.function #for static execution
 def train_step(img_tensor, tar):
     tar_inp = tar[:, :-1]  # cuts last column off
     tar_real = tar[:, 1:]  # cuts first column off
@@ -41,7 +41,7 @@ def train_step(img_tensor, tar):
     train_accuracy(tar_real, predictions)
     
 
-@tf.function
+#@tf.function
 def test_step(img_tensor, tar):
     tar_inp = tar[:, :-1]
     tar_real = tar[:, 1:]
@@ -58,28 +58,20 @@ def test_step(img_tensor, tar):
 
 
 if __name__ == '__main__':
-    lang = 'english'
-    embedding_type = 'random'  # pretrained or random
-    config = Config(lang, embedding_type)
-    seed = config.seed #not used?
 
-    if lang == 'english':
-        tokenizer = get_english_tokenizer()
-    elif lang == 'danish':
-        tokenizer = get_danish_tokenizer()
-    else:
-        raise NotImplementedError(f"{lang} not supported")
+    config_file = sys.argv[1]
+    config = load_config(config_file)
 
-    if embedding_type == 'pretrained':
-        model = get_pretrained_bert_transformer(config.lang)
-        # word_embeddings -> shape: 30522 x 768
-        embedding = model.bert.embeddings.weights[0]
-    else:
-        embedding = tf.keras.layers.Embedding(
-            tokenizer.vocab_size, config.d_model)
+    lang = config.lang
+    embedding_type = config.embedding_type  # pretrained or random
+    samples = config.samples #number or None for entire dataset
+    seed = config.seed #not used? should set tf.set_random_seed()
+    config.checkpoint_path = get_checkpoint_path(config) #could be set in config file
 
+
+    tokenizer = get_tokenizer(lang)
+    embedding = get_embedding(embedding_type, config, tokenizer)
     dataset_train, dataset_val, dataset_test = build_dataset(config, tokenizer)
-
     transformer = build_transformer(config, embedding, tokenizer)
 
     # Loss and Optimizer
@@ -112,9 +104,10 @@ if __name__ == '__main__':
     epoch_train_loss = []
     epoch_val_loss = []
 
+    start = time.time()
     for epoch in range(config.epochs):
         print("Epoch: ", epoch)
-        start = time.time()
+        epoch_start = time.time()
         train_loss.reset_states()
         train_accuracy.reset_states()
         val_loss.reset_states()
@@ -161,7 +154,7 @@ if __name__ == '__main__':
                                                                                      train_accuracy.result(),
                                                                                      val_loss.result(),
                                                                                      val_accuracy.result()))
-        print(f'Time taken for 1 epoch: {time.time() - start:.2f} secs\n')
+        print(f'Time taken for 1 epoch: {time.time() - epoch_start:.2f} secs\n')
 
         if epoch + 1 % 2 == 0:
             stop_early = callback_early_stopping(

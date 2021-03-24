@@ -1,0 +1,3 @@
+lang: danish
+embedding_type: random
+samples: None

@@ -1,0 +1,3 @@
+lang: english
+embedding_type: random
+samples: 4

@@ -1,19 +1,16 @@
 class Config(object):
-    def __init__(self, lang, embedding_type):
+    def __init__(self, lang, embedding_type, samples):
         
         # Training Type
         self.lang = lang
         self.embedding_type = embedding_type
+        self.samples = samples
+        self.epochs = 5
+        self.seed = 42
 
         # Data
         self.image_path = 'data/Flickr8k_Dataset/'
-        self.samples = 64
         self.checkpoint_path = './checkpoints'
-
-
-        #Basic
-        self.seed = 42
-        self.epochs = 5
 
         #Transformer
         self.num_layers = 4

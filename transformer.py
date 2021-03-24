@@ -237,9 +237,11 @@ class Decoder(tf.keras.layers.Layer):
         seq_len = tf.shape(x)[1]
         attention_weights = {}
         if not isinstance(self.embedding, keras.layers.Embedding):
-            x = tf.map_fn(self.get_sentence_tensor, x, fn_output_signature=tf.float32) #working but very slow
-            #x_embedded = [tf.map_fn(fn = lambda tok_id: self.embedding[tok_id], elems=row, fn_output_signature=tf.float32) for row in x] working without @tf.function
-            #x = tf.stack(x_embedded)
+            #x = x.numpy()
+            #x = tf.convert_to_tensor([[self.embedding[word] for word in sentence] for sentence in x])
+            #x = tf.map_fn(self.get_sentence_tensor, x, fn_output_signature=tf.float32) #working but very slow. Works with static and eager execution
+            x_embedded = [tf.map_fn(fn = lambda tok_id: self.embedding[tok_id], elems=row, fn_output_signature=tf.float32) for row in x] #working without @tf.function
+            x = tf.stack(x_embedded)
         else:
             x = self.embedding(x)
             x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))

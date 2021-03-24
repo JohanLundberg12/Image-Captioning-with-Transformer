@@ -1,3 +1,4 @@
+import tensorflow as tf
 
 # Transforme Module
 from transformers import BertTokenizer, TFBertModel #english
@@ -35,3 +36,27 @@ def get_pretrained_bert_transformer(lang):
         return get_english_transformer()
     else:
         raise NotImplementedError(f"{lang} not supported")
+
+
+def get_tokenizer(lang):
+    if lang == 'english':
+        tokenizer = get_english_tokenizer()
+    elif lang == 'danish':
+        tokenizer = get_danish_tokenizer()
+    else:
+        raise NotImplementedError(f"{lang} not supported")
+
+    return tokenizer
+
+
+def get_embedding(embedding_type, config, tokenizer):
+    if embedding_type == 'pretrained':
+        model = get_pretrained_bert_transformer(config.lang) # word_embeddings -> shape: 30522 x 768
+        embedding = model.bert.embeddings.weights[0]
+    elif embedding_type == 'random':
+        embedding = tf.keras.layers.Embedding(
+            tokenizer.vocab_size, config.d_model)
+    else:
+        raise NotImplementedError(f"{embedding_type} not supprted")
+
+    return embedding
