@@ -1,4 +1,6 @@
+import keras
 import tensorflow as tf
+from tensorflow.python.ops.variables import trainable_variables
 
 # Transforme Module
 from transformers import BertTokenizer, TFBertModel #english
@@ -52,7 +54,14 @@ def get_tokenizer(lang):
 def get_embedding(embedding_type, config, tokenizer):
     if embedding_type == 'pretrained':
         model = get_pretrained_bert_transformer(config.lang) # word_embeddings -> shape: 30522 x 768
-        embedding = model.bert.embeddings.weights[0]
+        embedding_matrix = model.bert.embeddings.weights[0]
+        embedding_matrix = embedding_matrix.numpy()
+        embedding = tf.keras.layers.Embedding(tokenizer.vocab_size, 
+                                                config.d_model,
+                                                trainable=False,
+                                                weights=[embedding_matrix],
+                                                input_shape=(None,))
+
     elif embedding_type == 'random':
         embedding = tf.keras.layers.Embedding(
             tokenizer.vocab_size, config.d_model)

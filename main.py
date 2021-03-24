@@ -68,7 +68,6 @@ if __name__ == '__main__':
     seed = config.seed #not used? should set tf.set_random_seed()
     config.checkpoint_path = get_checkpoint_path(config) #could be set in config file
 
-
     tokenizer = get_tokenizer(lang)
     embedding = get_embedding(embedding_type, config, tokenizer)
     dataset_train, dataset_val, dataset_test = build_dataset(config, tokenizer)
