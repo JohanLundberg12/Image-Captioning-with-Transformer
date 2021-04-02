@@ -225,24 +225,13 @@ class Decoder(tf.keras.layers.Layer):
                            for _ in range(num_layers)]
         self.dropout = tf.keras.layers.Dropout(rate)
 
-    def get_word_embedding(self, x):
-        return self.embedding[x]
-
-
-    def get_sentence_tensor(self, x):
-        return tf.map_fn(self.get_word_embedding, x, fn_output_signature=tf.float32)
-
 
     def call(self, x, enc_output, training, look_ahead_mask=None, padding_mask=None):
         seq_len = tf.shape(x)[1]
         attention_weights = {}
-        if not isinstance(self.embedding, keras.layers.Embedding):
+
+        if not self.embedding.trainable:
             x = self.embedding(x)
-            #x = x.numpy()
-            #x = tf.convert_to_tensor([[self.embedding[word] for word in sentence] for sentence in x])
-            #x = tf.map_fn(self.get_sentence_tensor, x, fn_output_signature=tf.float32) #working but very slow. Works with static and eager execution
-            #x_embedded = [tf.map_fn(fn = lambda tok_id: self.embedding[tok_id], elems=row, fn_output_signature=tf.float32) for row in x] #working without @tf.function
-            #x = tf.stack(x_embedded)
         else:
             x = self.embedding(x)
             x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
@@ -276,9 +265,6 @@ class Transformer(tf.keras.Model):
             tar, enc_output, training, look_ahead_mask, dec_padding_mask)
         # (batch_size, tar_seq_len, target_vocab_size)
         final_output = self.final_layer(dec_output)
-        
-        #Check effect on embedding
-        #check_pretrained_embedding(embedding, self.embedding)
         
         return final_output, attention_weights
 

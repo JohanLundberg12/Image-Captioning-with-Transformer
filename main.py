@@ -22,7 +22,7 @@ def loss_function(real, pred):
 
 # Training
 
-#@tf.function #for static execution
+@tf.function #for static execution
 def train_step(img_tensor, tar):
     tar_inp = tar[:, :-1]  # cuts last column off
     tar_real = tar[:, 1:]  # cuts first column off
@@ -41,7 +41,7 @@ def train_step(img_tensor, tar):
     train_accuracy(tar_real, predictions)
     
 
-#@tf.function
+@tf.function
 def test_step(img_tensor, tar):
     tar_inp = tar[:, :-1]
     tar_real = tar[:, 1:]
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     start = time.time()
     for epoch in range(config.epochs):
-        print("Epoch: ", epoch)
+        print("Epoch: ", epoch+1)
         epoch_start = time.time()
         train_loss.reset_states()
         train_accuracy.reset_states()
@@ -122,12 +122,12 @@ if __name__ == '__main__':
             train_step(img_tensor, tar)
 
             if batch % 4 == 0:
-                print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
-                    epoch + 1, batch, train_loss.result(), train_accuracy.result()))
+                print('Epoch [{}/{}] Batch: {} Loss {:.4f} Accuracy {:.4f}'.format(
+                    epoch + 1, config.epochs, batch, train_loss.result(), train_accuracy.result()))
                 train_loss_results.append(train_loss.result())
                 train_accuracy_results.append(train_accuracy.result())
         plot_loss_and_accuracy(
-            train_loss_results, train_accuracy_results, epoch+1, name='train', x_name='batches')
+            train_loss_results, train_accuracy_results, epoch+1, lang, embedding_type, name='train')
 
         print("Evaluating on the validation set.")
         for (batch, (img_tensor, tar)) in enumerate(dataset_val):
@@ -140,7 +140,7 @@ if __name__ == '__main__':
                 val_accuracy_results.append(val_accuracy.result())
 
         plot_loss_and_accuracy(
-            val_loss_results, val_accuracy_results, epoch+1, name='val', x_name='batches')
+            val_loss_results, val_accuracy_results, epoch+1, lang, embedding_type, name='val')
 
         epoch_train_loss.append(train_loss.result())
         epoch_val_loss.append(val_loss.result())
@@ -154,17 +154,25 @@ if __name__ == '__main__':
                                                                                      val_loss.result(),
                                                                                      val_accuracy.result()))
         print(f'Time taken for 1 epoch: {time.time() - epoch_start:.2f} secs\n')
+        
+        stop_early = False
 
-        if epoch + 1 % 2 == 0:
+        if epoch + 1 > 1:
             stop_early = callback_early_stopping(
                 epoch_train_loss, min_delta=0.1)
-            if stop_early:
-                print("Callback Early Stopping Signal Received")
-                print("Terminating Training")
-                break
+        if stop_early:
+            print("Callback Early Stopping Signal Received")
+            print("Terminating Training")
+            plot_loss_epochs(
+                epoch_train_loss, epoch_val_loss, config.embedding_type, lang
+            )
+            break
+        else:
+            print("No Callback to stop, continuing...")
 
     plot_loss_epochs(
         epoch_train_loss, epoch_val_loss, config.embedding_type, lang
     )
-    print("Training Time: %s seconds" % (time.time() - start))
+    print("Training Done!")
+    print("Total Training Time: %s seconds" % (time.time() - start))
     transformer.save_weights("./saved_models/ckpt")

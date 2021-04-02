@@ -71,8 +71,8 @@ def map_func(img_name, caption):
     return img_tensor, caption
 
 
-def data_to_tensors(img_names, captions):
-    batch_size = 4  # size used during training
+def data_to_tensors(img_names, captions, config):
+    batch_size = config.batch_size # size used during training
     buffer_size = 1000
     dataset = tf.data.Dataset.from_tensor_slices((img_names, captions))
     dataset = dataset.map(lambda item1, item2: tf.numpy_function(map_func, [item1, item2], [
@@ -105,8 +105,8 @@ def build_dataset(config, tokenizer):
         :train_pct], all_image_names[train_pct:test_pct], all_image_names[test_pct:]
     cap_train, cap_val, cap_test = input_ids[:train_pct], input_ids[
         train_pct:test_pct], input_ids[test_pct:]
-    dataset_train = data_to_tensors(img_names_train, cap_train)
-    dataset_val = data_to_tensors(img_names_val, cap_val)
-    dataset_test = data_to_tensors(img_names_test, cap_test)
+    dataset_train = data_to_tensors(img_names_train, cap_train, config)
+    dataset_val = data_to_tensors(img_names_val, cap_val, config)
+    dataset_test = data_to_tensors(img_names_test, cap_test, config)
 
     return dataset_train, dataset_val, dataset_test

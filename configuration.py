@@ -6,7 +6,8 @@ class Config(object):
         self.embedding_type = embedding_type
         self.samples = samples
         self.epochs = 5
-        self.seed = 42
+        self.seed = 2
+        self.batch_size = 128
 
         # Data
         self.image_path = 'data/Flickr8k_Dataset/'
