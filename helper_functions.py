@@ -27,7 +27,7 @@ def callback_early_stopping(loss, min_delta=0.1):
 
 
 def get_checkpoint_path(config):
-    return config.checkpoint_path + f'/{config.lang}/{config.embedding_type}/{config.batch_size}'
+    return config.checkpoint_path + f'/{config.lang}/{config.embedding_type}/{config.batch_size}/ckpt-1'
 
 
 def load_config(config_file):

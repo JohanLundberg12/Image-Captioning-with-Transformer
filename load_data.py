@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 
 
@@ -38,7 +38,6 @@ def extract_captions(df):
     all_captions = []
     for caption in df['caption']:
         # possibly strip caption of empty space before first word and after last word
-        caption = '[CLS] ' + caption + ' [SEP]'
         all_captions.append(caption)
 
     print(f"len(all_captions) : {len(all_captions)}")
@@ -72,7 +71,7 @@ def map_func(img_name, caption):
 
 
 def data_to_tensors(img_names, captions, config):
-    batch_size = config.batch_size # size used during training
+    batch_size = config.batch_size  # size used during training
     buffer_size = 1000
     dataset = tf.data.Dataset.from_tensor_slices((img_names, captions))
     dataset = dataset.map(lambda item1, item2: tf.numpy_function(map_func, [item1, item2], [
@@ -83,30 +82,28 @@ def data_to_tensors(img_names, captions, config):
     return dataset
 
 
+def tokenize_captions(captions, tokenizer):
+    return tokenizer(captions, padding=True, return_tensors="tf", return_token_type_ids=False, return_attention_mask=False)['input_ids']
+
+
 def build_dataset(config, tokenizer):
     lang = config.lang
     image_path = config.image_path
-    captions_file = get_captions_file(lang)
-    df = load_captions(captions_file)
-    df = sample_from_df(df, config.samples, config.seed)
-    
-    all_captions = extract_captions(df)
-    all_image_names = extract_image_names(df, image_path)
 
-    input_ids = tokenizer(all_captions,
-                      padding=True,
-                      return_tensors="tf",
-                      return_token_type_ids=False,
-                      return_attention_mask=False)['input_ids']
-    # Splits
-    train_pct = int(0.8*len(all_image_names))
-    test_pct = int(0.9*len(all_image_names))
-    img_names_train, img_names_val, img_names_test = all_image_names[
-        :train_pct], all_image_names[train_pct:test_pct], all_image_names[test_pct:]
-    cap_train, cap_val, cap_test = input_ids[:train_pct], input_ids[
-        train_pct:test_pct], input_ids[test_pct:]
-    dataset_train = data_to_tensors(img_names_train, cap_train, config)
-    dataset_val = data_to_tensors(img_names_val, cap_val, config)
-    dataset_test = data_to_tensors(img_names_test, cap_test, config)
+    df_train = pd.read_csv(f'data/{lang}_train.csv')
+    df_val = pd.read_csv(f'data/{lang}_val.csv')
+    df_train = sample_from_df(df_train, config.samples, config.seed)
+    df_val = sample_from_df(df_val, config.samples, config.seed)
 
-    return dataset_train, dataset_val, dataset_test
+    captions_train = extract_captions(df_train)
+    img_names_train = extract_image_names(df_train, image_path)
+    captions_val = extract_captions(df_val)
+    img_names_val = extract_image_names(df_val, image_path)
+
+    input_ids_train = tokenize_captions(captions_train, tokenizer)
+    input_ids_val = tokenize_captions(captions_val, tokenizer)
+
+    dataset_train = data_to_tensors(img_names_train, input_ids_train, config)
+    dataset_val = data_to_tensors(img_names_val, input_ids_val, config)
+
+    return dataset_train, dataset_val

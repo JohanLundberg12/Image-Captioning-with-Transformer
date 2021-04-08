@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
+from os import listdir
 
 def load_inception_v3():
     #include_top = whether to include the fully-connected layer at the top, as the last layer of the network. Default to True.
@@ -50,6 +51,8 @@ def extract_image_features(image_path, all_image_names):
 
 
 if __name__ == '__main__':
-    image_path = 'data/Flickr8k_Dataset/'
-    all_image_names = [file for file in dir(image_path) if file.split('.')[-1] == 'jpg'] #check to avoid .npy files
+    image_path = 'data/my_photos/'
+    #image_path = 'data/Flickr8k_Dataset/'
+    all_image_names = [image_path+file for file in listdir(image_path) if file.split('.')[-1] == 'jpg'] #check to avoid .npy files
+    print(all_image_names) 
     extract_image_features(image_path, all_image_names)

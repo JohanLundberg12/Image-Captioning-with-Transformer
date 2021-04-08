@@ -62,15 +62,14 @@ if __name__ == '__main__':
     config_file = sys.argv[1]
     config = load_config(config_file)
 
-    lang = config.lang
+    lang = config.lang #english or danish
     embedding_type = config.embedding_type  # pretrained or random
     samples = config.samples #number or None for entire dataset
-    seed = config.seed #not used? should set tf.set_random_seed()
     config.checkpoint_path = get_checkpoint_path(config) #could be set in config file
 
     tokenizer = get_tokenizer(lang)
     embedding = get_embedding(embedding_type, config, tokenizer)
-    dataset_train, dataset_val, dataset_test = build_dataset(config, tokenizer)
+    dataset_train, dataset_val = build_dataset(config, tokenizer)
     transformer = build_transformer(config, embedding, tokenizer)
 
     # Loss and Optimizer
@@ -102,53 +101,59 @@ if __name__ == '__main__':
 
     epoch_train_loss = []
     epoch_val_loss = []
+    epoch_train_acc = []
+    epoch_val_acc = []
 
     start = time.time()
     for epoch in range(config.epochs):
+
         print("Epoch: ", epoch+1)
         epoch_start = time.time()
+
         train_loss.reset_states()
         train_accuracy.reset_states()
         val_loss.reset_states()
         val_accuracy.reset_states()
-        train_loss_results = []
-        train_accuracy_results = []
-        val_loss_results = []
-        val_accuracy_results = []
+        
+        #train_loss_results = []
+        #train_accuracy_results = []
+        #val_loss_results = []
+        #val_accuracy_results = []
 
-        print("Training on train set.")
         for (batch, (img_tensor, tar)) in enumerate(dataset_train): 
         # (img_tensor: image, tar: input sentence)
             train_step(img_tensor, tar)
 
-            if batch % 4 == 0:
+            if batch % 50 == 0:
                 print('Epoch [{}/{}] Batch: {} Loss {:.4f} Accuracy {:.4f}'.format(
                     epoch + 1, config.epochs, batch, train_loss.result(), train_accuracy.result()))
-                train_loss_results.append(train_loss.result())
-                train_accuracy_results.append(train_accuracy.result())
-        plot_loss_and_accuracy(
-            train_loss_results, train_accuracy_results, epoch+1, lang, embedding_type, name='train')
+                #train_loss_results.append(train_loss.result())
+                #train_accuracy_results.append(train_accuracy.result())
+        #plot_loss_and_accuracy(
+        #    train_loss_results, train_accuracy_results, epoch+1, lang, embedding_type, name='train')
 
         print("Evaluating on the validation set.")
         for (batch, (img_tensor, tar)) in enumerate(dataset_val):
             test_step(img_tensor, tar)
 
-            if batch % 4 == 0:
-                print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
-                    epoch + 1, batch, val_loss.result(), val_accuracy.result()))
-                val_loss_results.append(val_loss.result())
-                val_accuracy_results.append(val_accuracy.result())
+            if batch % 50 == 0:
+                print('Epoch [{}/{}] Batch: {} Loss: {:.4f} Accuracy: {:.4f}'.format(
+                    epoch + 1, config.epochs, batch, val_loss.result(), val_accuracy.result()))
+                #val_loss_results.append(val_loss.result())
+                #val_accuracy_results.append(val_accuracy.result())
 
-        plot_loss_and_accuracy(
-            val_loss_results, val_accuracy_results, epoch+1, lang, embedding_type, name='val')
+        #plot_loss_and_accuracy(
+        #    val_loss_results, val_accuracy_results, epoch+1, lang, embedding_type, name='val')
 
         epoch_train_loss.append(train_loss.result())
         epoch_val_loss.append(val_loss.result())
+        epoch_train_acc.append(train_accuracy.result())
+        epoch_val_acc.append(val_accuracy.result())
 
         ckpt_save_path = ckpt_manager.save()
         print(f'Saving checkpoint for epoch {epoch+1} at {ckpt_save_path}')
 
-        print('Epoch {} Loss {:.4f} Accuracy {:.4f} val loss {} val acc {}\n'.format(epoch + 1,
+        print('Epoch {} Loss: {:.4f} Accuracy: {:.4f} val loss: {} val Accuracy: {}\n'.format(epoch + 1,
                                                                                      train_loss.result(),
                                                                                      train_accuracy.result(),
                                                                                      val_loss.result(),
@@ -157,15 +162,12 @@ if __name__ == '__main__':
         
         stop_early = False
 
-        if epoch + 1 > 1:
+        if epoch + 1 > 15:
             stop_early = callback_early_stopping(
                 epoch_train_loss, min_delta=0.1)
         if stop_early:
             print("Callback Early Stopping Signal Received")
             print("Terminating Training")
-            plot_loss_epochs(
-                epoch_train_loss, epoch_val_loss, config.embedding_type, lang
-            )
             break
         else:
             print("No Callback to stop, continuing...")
@@ -173,6 +175,11 @@ if __name__ == '__main__':
     plot_loss_epochs(
         epoch_train_loss, epoch_val_loss, config.embedding_type, lang
     )
+
+    plot_acc_epochs(
+        epoch_train_acc, epoch_val_acc, config.embedding_type, lang
+    )
+
     print("Training Done!")
     print("Total Training Time: %s seconds" % (time.time() - start))
     transformer.save_weights("./saved_models/ckpt")
