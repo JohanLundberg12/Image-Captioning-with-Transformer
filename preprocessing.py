@@ -36,3 +36,11 @@ def clean_df(df):
 
     return df
 
+
+def remove_unk(caption, unk_token):
+    for token in caption:
+        if token == unk_token:
+            caption.remove(token)
+    
+    return caption
+
