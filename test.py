@@ -33,7 +33,8 @@ if __name__ == '__main__':
     ckpt_manager = tf.train.CheckpointManager(
         ckpt, config.checkpoint_path, max_to_keep=5)
     # if a checkpoint exists, restore the latest checkpoint.
-    ckpt.restore(ckpt_manager.latest_checkpoint)
+    ckpt_path = tf.train.get_checkpoint_state(f'./checkpoints/{config.lang}/{config.embedding_type}/32/ckpt-1/').all_model_checkpoint_paths[14] #ckpt-15 best checkpoint
+    ckpt.restore(ckpt_path)
     
     captions = []
     real_captions = []

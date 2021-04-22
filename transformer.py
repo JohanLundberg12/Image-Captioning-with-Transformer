@@ -230,13 +230,10 @@ class Decoder(tf.keras.layers.Layer):
         seq_len = tf.shape(x)[1]
         attention_weights = {}
 
-        if not self.embedding.trainable:
-            x = self.embedding(x)
-        else:
-            x = self.embedding(x)
-            x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
-            x += self.pos_encoding[:, :seq_len, :]
-            x = self.dropout(x, training=training)
+        x = self.embedding(x)
+        x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
+        x += self.pos_encoding[:, :seq_len, :]
+        x = self.dropout(x, training=training)
 
         for i in range(self.num_layers):
             x, block1, block2 = self.dec_layers[i](x, enc_output, training,

@@ -89,7 +89,7 @@ if __name__ == '__main__':
     ckpt = tf.train.Checkpoint(transformer=transformer,
                                optimizer=optimizer)
     ckpt_manager = tf.train.CheckpointManager(
-        ckpt, config.checkpoint_path, max_to_keep=5)
+        ckpt, config.checkpoint_path, max_to_keep=50)
     # if a checkpoint exists, restore the latest checkpoint.
     ckpt.restore(ckpt_manager.latest_checkpoint)
     if ckpt_manager.latest_checkpoint:
@@ -125,10 +125,6 @@ if __name__ == '__main__':
             if batch % 50 == 0:
                 print('Epoch [{}/{}] Batch: {} Loss {:.4f} Accuracy {:.4f}'.format(
                     epoch + 1, config.epochs, batch, train_loss.result(), train_accuracy.result()))
-                #train_loss_results.append(train_loss.result())
-                #train_accuracy_results.append(train_accuracy.result())
-        #plot_loss_and_accuracy(
-        #    train_loss_results, train_accuracy_results, epoch+1, lang, embedding_type, name='train')
 
         print("Evaluating on the validation set.")
         for (batch, (img_tensor, tar)) in enumerate(dataset_val):
@@ -137,11 +133,7 @@ if __name__ == '__main__':
             if batch % 50 == 0:
                 print('Epoch [{}/{}] Batch: {} Loss: {:.4f} Accuracy: {:.4f}'.format(
                     epoch + 1, config.epochs, batch, val_loss.result(), val_accuracy.result()))
-                #val_loss_results.append(val_loss.result())
-                #val_accuracy_results.append(val_accuracy.result())
 
-        #plot_loss_and_accuracy(
-        #    val_loss_results, val_accuracy_results, epoch+1, lang, embedding_type, name='val')
 
         epoch_train_loss.append(train_loss.result())
         epoch_val_loss.append(val_loss.result())
@@ -158,17 +150,6 @@ if __name__ == '__main__':
                                                                                      val_accuracy.result()))
         print(f'Time taken for 1 epoch: {time.time() - epoch_start:.2f} secs\n')
         
-        stop_early = False
-
-        if epoch + 1 > 15:
-            stop_early = callback_early_stopping(
-                epoch_train_loss, min_delta=0.1)
-        if stop_early:
-            print("Callback Early Stopping Signal Received")
-            print("Terminating Training")
-            break
-        else:
-            print("No Callback to stop, continuing...")
 
     plot_loss_epochs(
         epoch_train_loss, epoch_val_loss, config.embedding_type, lang

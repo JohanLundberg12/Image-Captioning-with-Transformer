@@ -1,11 +1,14 @@
 # Standard Modules
-import numpy as np
 import sys
 import tensorflow as tf
+from os import listdir
 
-# Image Modules
-import matplotlib.pyplot as plt
+# Images
 from PIL import Image
+from PIL import ImageFont
+from PIL import ImageDraw 
+
+font = ImageFont.truetype('./arial.ttf', size=20)
 
 # Custom Modules
 from evaluation import evaluate
@@ -15,7 +18,7 @@ from pretrained_transformers import get_embedding, get_tokenizer
 from transformer import build_transformer, CustomSchedule
 
 config_file = sys.argv[1]
-image = sys.argv[2]
+image_dir = sys.argv[2]
 config = load_config(config_file)
 config.checkpoint_path = get_checkpoint_path(config) #could be set in config file
 
@@ -36,10 +39,20 @@ ckpt_manager = tf.train.CheckpointManager(
 ckpt_path = tf.train.get_checkpoint_state(f'./checkpoints/{config.lang}/{config.embedding_type}/32/ckpt-1/').all_model_checkpoint_paths[14] #ckpt-15 best checkpoint
 ckpt.restore(ckpt_path)
 
-caption, result, attention_weights = evaluate(image, tokenizer, transformer)
-caption = remove_unk(caption, tokenizer.unk_token)
+images = [image_dir + image for image in listdir(image_dir) if image.split('.')[-1] == 'jpg']
 
-temp_image = np.array(Image.open(image))
-print("\nCaption: ", caption, "\n")
-plt.imshow(temp_image)
-plt.show()
+for image in images:
+    caption, result, attention_weights = evaluate(image, tokenizer, transformer)
+    caption = remove_unk(caption, tokenizer.unk_token)
+    caption = " ".join(caption)
+
+    img = Image.open(image)
+    img = img.resize((700, 375))
+    width, height = img.size
+    img2 = Image.new('RGB', (width,int(height+(height/5))), 'white')
+    img2.paste(img)
+    draw = ImageDraw.Draw(img2)
+    draw.text((5, 400),caption,(0,0,0), font=font)
+
+    image = image.split('/')[-1]
+    img2.save(f'./data/extra_test_set/predictions/{config.lang}/{config.embedding_type}/{image}')

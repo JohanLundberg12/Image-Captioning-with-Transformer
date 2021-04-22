@@ -4,7 +4,7 @@ class Config(object):
         # Training Type
         self.batch_size = 32
         self.embedding_type = embedding_type
-        self.epochs = 30
+        self.epochs = 50
         self.lang = lang
         self.samples = samples
         self.seed = 2
