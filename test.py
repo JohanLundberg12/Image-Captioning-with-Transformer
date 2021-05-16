@@ -52,10 +52,10 @@ if __name__ == '__main__':
         caption = caption.rsplit(" ", 1)[0]
         captions.append(caption)
 
-    #bleu1_scores = []
-    #bleu2_scores = []
-    #bleu3_scores = []
-    #bleu4_scores = []
+    bleu1_scores = []
+    bleu2_scores = []
+    bleu3_scores = []
+    bleu4_scores = []
     meteor_scores = []
     rouge_L_scores = []
     rouge_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
@@ -67,22 +67,22 @@ if __name__ == '__main__':
         meteor_score = single_meteor_score(reference, candidate)
         meteor_scores.append(meteor_score)
 
-        #bleu1_scores.append(bleu1(reference, candidate))
-        #bleu2_scores.append(bleu2(reference, candidate))
-        #bleu3_scores.append(bleu3(reference, candidate))
-        #bleu4_scores.append(bleu4(reference, candidate))
+        bleu1_scores.append(bleu1(reference, candidate))
+        bleu2_scores.append(bleu2(reference, candidate))
+        bleu3_scores.append(bleu3(reference, candidate))
+        bleu4_scores.append(bleu4(reference, candidate))
 
-    #avg_bleu1_score = sum(bleu1_scores)/len(bleu1_scores)
-    #avg_bleu2_score = sum(bleu2_scores)/len(bleu2_scores)
-    #avg_bleu3_score = sum(bleu3_scores)/len(bleu3_scores)
-    #avg_bleu4_score = sum(bleu4_scores)/len(bleu4_scores)
+    avg_bleu1_score = sum(bleu1_scores)/len(bleu1_scores)
+    avg_bleu2_score = sum(bleu2_scores)/len(bleu2_scores)
+    avg_bleu3_score = sum(bleu3_scores)/len(bleu3_scores)
+    avg_bleu4_score = sum(bleu4_scores)/len(bleu4_scores)
     avg_rouge_L_score = sum(rouge_L_scores)/len(rouge_L_scores)
     avg_meteor_score = sum(meteor_scores)/len(meteor_scores)
 
-    #print(f"AVG BLEU-1 score: {avg_bleu1_score}")
-    #print(f"AVG BLEU-2 score: {avg_bleu2_score}")
-    #print(f"AVG BLEU-3 score: {avg_bleu3_score}")
-    #print(f"AVG BLEU-4 score: {avg_bleu4_score}")
+    print(f"AVG BLEU-1 score: {avg_bleu1_score}")
+    print(f"AVG BLEU-2 score: {avg_bleu2_score}")
+    print(f"AVG BLEU-3 score: {avg_bleu3_score}")
+    print(f"AVG BLEU-4 score: {avg_bleu4_score}")
     print(f"AVG Rouge L score: {avg_rouge_L_score}")
     print(f"AVG Meteor Score: {avg_meteor_score}")
     
