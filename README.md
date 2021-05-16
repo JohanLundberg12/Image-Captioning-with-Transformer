@@ -1,5 +1,7 @@
 # Image-Captioning-with-Transformer
 
+See the example jupyter for an example test.
+
 To train the model in English run:
 ```bash
 main.py config_files/english_pretrained.txt
